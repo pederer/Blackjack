@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Classic Blackjack</title>
+
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<link rel="stylesheet" type="text/css" href="resources/bootstrap/css/bootstrap.min.css" media="screen">
+		<link rel="stylesheet" type="text/css" href="css/deck.css">
+		<link rel="stylesheet" type="text/css" href="css/blackjack.css">
+	</head>
+
+	<body>
+		<div class="navbar navbar-inverse navbar-static-top">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".bs-navbar-collapse">
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="#">Blackjack</a>
+				</div>
+
+				<!-- Place everything within .navbar-collapse to hide it until above 768px -->
+				<div class="navbar-collapse collapse bs-navbar-collapse">
+					<ul class="nav navbar-nav">
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown" href="#" style="outline-color: transparent;"> Game </a>
+							<ul class="dropdown-menu">
+								<li><a id="new_game_btn" href="#" > New Game </a></li>
+								<!-- <li><a id="new_game_btn" href="#Game" data-toggle="tab"> New Game </a></li> -->
+								<li class="divider"></li>
+								<!-- <li><a href="#">Hint</a></li> -->
+								<!-- <li><a href="#">Statistics</a></li> -->
+								<!-- <li><a href="#">Awards (should probably go in Statistics)</a></li> -->
+									<!-- win 3 in a row -->
+									<!-- win twenty -->
+									<!-- double bankroll -->
+									<!-- imediate loss -->
+								<li><a id="game_options_btn" href="#">Options</a></li>
+							</ul>
+						</li>
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown" href="#" style="outline-color: transparent;"> Help </a>
+							<ul class="dropdown-menu">
+								<li>
+									<a href="#">Rules</a>
+								</li>
+								<li class="divider"></li>
+								<li>
+									<a href="#">About Blackjack</a>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
+		<div class="tab-content">
+			
+			<!-- Welcome screen -->
+			<div class="jumbotron active tab-pane" style="text-align: center; margin-top: -20px;">
+				<h1>Welcome to Classic Blackjack!</h1>
+				<p>
+					<a class="btn btn-primary btn-large" href="#Game" data-toggle="tab" > New Game </a>
+				</p>
+			</div>
+			
+			<div id="Game" class="container tab-pane">
+				<div id="dealer_row" class="card-row-medium">
+					<span class="">
+						<span class="dealer-cards"></span>
+					</span>
+				</div>
+				<div class="betting-row">
+					<span style="text-align: center; display: block;">
+						<span class="betting-info pull-left hidden-xs">
+							Blackjack Pays 3:2
+						</span>
+						<span id="betting_mat" class="betting-info">
+							Place Bets
+						</span>
+						<span class="betting-info pull-right hidden-xs">
+							Insurance Pays 2:1
+						</span>
+					</span>
+				</div>
+				<div id="player_row" class="card-row-medium">
+					<span style="display: inline-block; vertical-align: top;">
+						<ul class="player" style="list-style: none outside none; padding: 0 20px;">
+							<li class="player-cards"></li>
+							<li class="player-action">
+								<div class="btn-group">
+									<button class="btn btn-default btn-hit">Hit</button>
+									<button class="btn btn-default btn-double">Double Down</button>
+									<button class="btn btn-default btn-split">Split</button>
+									<button class="btn btn-default btn-stand">Stand</button>
+								</div>
+							</li>
+						</ul>
+					</span>
+					<span style="display: inline-block; vertical-align: top;">
+						<ul class="player-split hide" style="list-style: none outside none; padding: 0 20px;">
+							<li class="player-split-cards"></li>
+							<li class="player-split-action">
+								<div class="btn-group">
+									<button class="btn btn-default btn-hit">Hit</button>
+									<button class="btn btn-default btn-stand">Stand</button>
+								</div>
+							</li>
+						</ul>
+					</span>
+				</div>
+				
+				<!-- Temporary trouble-shooting measure -->
+				<!-- <div class="card-row-medium">
+					<span class="deck-cards">
+						
+					</span>
+				</div> -->
+			</div>
+		</div>
+		
+		<!-- Wager Modal -->
+		<div class="modal fade" id="wagerModal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+							&times;
+						</button>
+						<h4 class="modal-title">Wager</h4>
+					</div>
+					<div class="modal-body">
+						<div>
+							<h2>Bankroll</h2>
+							<h3></h3>
+						</div>
+						<div>
+							<h2>Wager</h2>
+							<div class="row">
+								<div class="col-lg-6">
+									<input type="text" class="form-control" style="text-align: left;">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
+						<a href="#" class="btn btn-primary" data-dismiss="modal">Deal</a>
+					</div>
+				</div>
+			</div>
+		</div><!-- /.modal -->
+		
+		<!-- Results Modal -->
+		<div class="modal fade" id="resultsModal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+							&times;
+						</button>
+						<h4 class="modal-title">Results</h4>
+					</div>
+					<div class="modal-body">
+						<div class="results">
+							
+						</div>
+						<div>
+							<h2>Bankroll</h2>
+							<h3></h3>
+						</div>
+						<div>
+							<h2>Wager</h2>
+							<div class="row">
+								<div class="col-lg-6">
+									<input type="text" class="form-control" style="text-align: left;">
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
+						<a href="#" class="btn btn-primary" data-dismiss="modal">Play Again</a>
+					</div>
+				</div>
+			</div>
+		</div><!-- /.modal -->
+		
+		<!-- Options Modal -->
+		<div class="modal fade" id="optionsModal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+							&times;
+						</button>
+						<h4 class="modal-title">Options</h4>
+					</div>
+					<div class="modal-body">
+						<div>
+							<span>Deck Color:&nbsp;</span>
+							<span class="btn-group">
+								<button id="blue_deck_btn" class="btn btn-primary btn-small">Blue</button>
+								<button id="red_deck_btn" class="btn btn-danger btn-small">Red</button>
+							</span>
+						</div>
+						<br />
+						<div class="form-inline">
+							<span>Deck Count:&nbsp;</span>
+							<input id="deck_count_input" type="text" class="form-control input-small" style="width: 50px" maxlength="2">
+						</div>
+						<br />
+						<p style="margin-bottom: -20px; color: #AAAAAA">
+							Changes will not take effect until "New Game" is selected in the Game menu.
+						</p>
+					</div>
+					<div class="modal-footer">
+						<a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
+						<a href="#" class="btn btn-primary" data-dismiss="modal"> Save </a>
+					</div>
+				</div>
+			</div>
+		</div><!-- /.modal -->
+
+		<!-- Bootstrap requires jQuery -->
+		<script src="resources/jquery/jquery-1.10.1.min.js"></script>
+		<script src="resources/bootstrap/js/bootstrap.min.js"></script>
+		<script src="js/deck.js"></script>
+		<script src="js/player.js"></script>
+		<script src="js/blackjack.js"></script>
+	</BODY>
+</HTML>
