@@ -137,13 +137,33 @@ body {
 	gap: 2px;
 }
 
-.hand-cards span {
-	flex: 0 0 110px;
+.card-slot {
+	flex: 0 0 68px;
+	width: 68px;
+	height: 146px;
+	margin: 4px -12px -4px;
+	transform-origin: top center;
+}
+
+.card-slot > span {
+	display: block;
 	width: 168px;
 	height: 235px;
-	margin: 4px -29px -83px;
 	transform: scale(0.62);
-	transform-origin: top center;
+	transform-origin: top left;
+}
+
+.card-slot.card-dealing {
+	animation: card-reveal 100ms ease-out both;
+}
+
+@keyframes card-reveal {
+	from { opacity: 0; transform: translateY(-14px) scale(0.94); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.card-slot.card-dealing { animation-duration: 0.01ms; }
 }
 
 .hand-total {
@@ -472,9 +492,14 @@ input:focus {
 		padding: 8px 2px;
 	}
 
-	.hand-cards span {
-		flex-basis: 82px;
-		margin-right: -40px;
+	.card-slot {
+		flex-basis: 54px;
+		width: 54px;
+		height: 113px;
+		margin-right: -18px;
+	}
+
+	.card-slot > span {
 		transform: scale(0.48);
 	}
 

@@ -4,6 +4,7 @@
 
 	var STARTING_BANKROLL = 1000;
 	var MAX_DECKS = 8;
+	var CARD_REVEAL_MS = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 100;
 	var bankroll = STARTING_BANKROLL;
 	var previousWager = 100;
 	var selectedDeckColor = 'red';
@@ -14,6 +15,9 @@
 	var phase = 'welcome';
 	var splitUsed = false;
 	var roundStartBankroll = STARTING_BANKROLL;
+	var interactionToken = 0;
+	var actionTimer = null;
+	var pendingAnimationIds = [];
 
 	function byId(id) {
 		return document.getElementById(id);
@@ -21,8 +25,6 @@
 
 	var welcomeScreen = byId('welcome_screen');
 	var gameScreen = byId('game_screen');
-	var navToggle = byId('nav_toggle');
-	var navMenu = byId('main_navigation');
 	var wagerDialog = byId('wagerModal');
 	var resultsDialog = byId('resultsModal');
 	var optionsDialog = byId('optionsModal');
@@ -63,16 +65,23 @@
 		return card.label + ' of ' + card.suit;
 	}
 
-	function renderCards(cards, hiddenHoleCard) {
+	function renderCards(cards, hiddenHoleCard, animationIds) {
 		var classes = [];
 		var spoken = [];
+		var isAnimated;
+		var slotClass;
+		var faceClass;
 		var i;
 		for (i = 0; i < cards.length; i += 1) {
+			isAnimated = animationIds.indexOf(cards[i].id) !== -1;
+			slotClass = 'card-slot' + (isAnimated ? ' card-dealing' : '');
 			if (hiddenHoleCard && i === 1) {
-				classes.push('<span class="' + cards[i].style_hidden_medium + '" aria-hidden="true"></span>');
+				faceClass = cards[i].style_hidden_medium;
+				classes.push('<span class="' + slotClass + '" aria-hidden="true"><span class="' + faceClass + '"></span></span>');
 				spoken.push('one card face down');
 			} else {
-				classes.push('<span class="' + cards[i].style_medium + '" aria-hidden="true"></span>');
+				faceClass = cards[i].style_medium;
+				classes.push('<span class="' + slotClass + '" aria-hidden="true"><span class="' + faceClass + '"></span></span>');
 				spoken.push(cardName(cards[i]));
 			}
 		}
@@ -80,14 +89,16 @@
 	}
 
 	function updateTable() {
-		var dealerHidden = phase === 'player';
+		var dealerHidden = phase === 'player' || phase === 'dealing' || phase === 'revealing';
 		var dealerTotal = '';
 		var dealerLabel = 'Dealer cards: ';
 		var i;
 		var dealerCardsNode;
+		var animationIds = pendingAnimationIds.slice(0);
+		pendingAnimationIds = [];
 
 		byId('bankroll_display').textContent = 'Bankroll: $' + bankroll;
-		byId('dealer_cards').innerHTML = renderCards(dealerCards, dealerHidden);
+		byId('dealer_cards').innerHTML = renderCards(dealerCards, dealerHidden, animationIds);
 		if (dealerCards.length) {
 			if (dealerHidden) {
 				dealerLabel += cardName(dealerCards[0]) + ' and one card face down';
@@ -105,7 +116,7 @@
 		var playerHands = byId('player_hands');
 		playerHands.innerHTML = '';
 		for (i = 0; i < hands.length; i += 1) {
-			playerHands.insertAdjacentHTML('beforeend', renderHand(i, hands[i]));
+			playerHands.insertAdjacentHTML('beforeend', renderHand(i, hands[i], animationIds));
 		}
 		if (phase === 'player') {
 			var firstAction = playerHands.querySelector('.active-hand [data-action="hit"]');
@@ -132,6 +143,15 @@
 		if (phase === 'ready') {
 			return bankroll >= 1 ? 'Place a wager to begin.' : 'Your bankroll is below the minimum wager. Start a New Game to reset it.';
 		}
+		if (phase === 'dealing') {
+			return 'Dealing cards…';
+		}
+		if (phase === 'revealing') {
+			return 'Card revealed…';
+		}
+		if (phase === 'dealer') {
+			return 'Dealer is playing…';
+		}
 		if (phase === 'player') {
 			var index = currentHandIndex();
 			return index === -1 ? 'Resolving the round…' : 'Hand ' + (index + 1) + ': choose an available action.';
@@ -152,13 +172,13 @@
 		return -1;
 	}
 
-	function renderHand(index, hand) {
+	function renderHand(index, hand, animationIds) {
 		var current = phase === 'player' && index === currentHandIndex();
 		var title = hands.length > 1 ? 'Hand ' + (index + 1) : 'Your Hand';
 		var value = handValue(hand.cards);
 		var html = '<section class="player-hand' + (current ? ' active-hand' : '') + '" aria-labelledby="hand-title-' + index + '">';
 		html += '<h3 id="hand-title-' + index + '">' + title + '</h3>';
-		html += renderCards(hand.cards, false);
+		html += renderCards(hand.cards, false, animationIds);
 		html += '<p class="hand-total">Total ' + value + ' · Wager $' + hand.wager + '</p>';
 		if (current) {
 			html += '<div class="hand-actions" role="group" aria-label="Actions for ' + title + '">';
@@ -201,6 +221,15 @@
 		deck.shuffle();
 	}
 
+	function cancelScheduledAction() {
+		interactionToken += 1;
+		if (actionTimer !== null) {
+			window.clearTimeout(actionTimer);
+			actionTimer = null;
+		}
+		pendingAnimationIds = [];
+	}
+
 	function closeOpenDialogs(callback) {
 		var openDialogs = document.querySelectorAll('dialog[open]');
 		for (var i = 0; i < openDialogs.length; i += 1) {
@@ -212,6 +241,7 @@
 	}
 
 	function newGame() {
+		cancelScheduledAction();
 		closeOpenDialogs(function() {
 			bankroll = STARTING_BANKROLL;
 			previousWager = Math.min(previousWager, bankroll);
@@ -274,6 +304,8 @@
 		if ((phase !== 'ready' && phase !== 'settled') || !isFinite(amount) || amount < 1 || Math.floor(amount) !== amount || amount > bankroll) {
 			return;
 		}
+		cancelScheduledAction();
+		var token = interactionToken;
 		collectRoundCards();
 		roundStartBankroll = bankroll;
 		previousWager = amount;
@@ -281,20 +313,56 @@
 		splitUsed = false;
 		dealerCards = [];
 		hands = [{ cards: [], wager: amount, done: false, splitHand: false, natural: false }];
-		hands[0].cards.push(deck.deal(1)[0]);
-		dealerCards.push(deck.deal(1)[0]);
-		hands[0].cards.push(deck.deal(1)[0]);
-		dealerCards.push(deck.deal(1)[0]);
-		phase = 'player';
+		phase = 'dealing';
 		showGameScreen();
+		updateTable();
 
+		var cards = deck.deal(4);
+		var steps = [
+			{ target: 'player', card: cards[0] },
+			{ target: 'dealer', card: cards[1] },
+			{ target: 'player', card: cards[2] },
+			{ target: 'dealer', card: cards[3] }
+		];
+		revealOpeningCard(token, steps, 0);
+	}
+
+	function revealOpeningCard(token, steps, index) {
+		if (token !== interactionToken || phase !== 'dealing') {
+			return;
+		}
+		var step = steps[index];
+		if (step.target === 'player') {
+			hands[0].cards.push(step.card);
+		} else {
+			dealerCards.push(step.card);
+		}
+		pendingAnimationIds = [step.card.id];
+		updateTable();
+		if (index + 1 < steps.length) {
+			actionTimer = window.setTimeout(function() {
+				actionTimer = null;
+				revealOpeningCard(token, steps, index + 1);
+			}, CARD_REVEAL_MS);
+		} else {
+			actionTimer = window.setTimeout(function() {
+				actionTimer = null;
+				completeOpeningDeal(token);
+			}, CARD_REVEAL_MS);
+		}
+	}
+
+	function completeOpeningDeal(token) {
+		if (token !== interactionToken || phase !== 'dealing') {
+			return;
+		}
 		var dealerNatural = isBlackjack(dealerCards);
 		hands[0].natural = isBlackjack(hands[0].cards);
 		if (dealerNatural || hands[0].natural) {
-			updateTable();
 			settleRound(dealerNatural, false);
 			return;
 		}
+		phase = 'player';
 		updateTable();
 	}
 
@@ -315,11 +383,13 @@
 			advanceHands();
 			return;
 		}
-		hand.cards.push(deck.deal(1)[0]);
+		var card = deck.deal(1)[0];
+		hand.cards.push(card);
+		pendingAnimationIds = [card.id];
 		if (handValue(hand.cards) >= 21) {
 			hand.done = true;
 		}
-		advanceHands();
+		showPlayerRevealThenAdvance();
 	}
 
 	function stand(index) {
@@ -340,9 +410,11 @@
 		}
 		bankroll -= hand.wager;
 		hand.wager *= 2;
-		hand.cards.push(deck.deal(1)[0]);
+		var card = deck.deal(1)[0];
+		hand.cards.push(card);
+		pendingAnimationIds = [card.id];
 		hand.done = true;
-		advanceHands();
+		showPlayerRevealThenAdvance();
 	}
 
 	function split(index) {
@@ -356,8 +428,11 @@
 		bankroll -= original.wager;
 		var left = { cards: [original.cards[0]], wager: original.wager, done: false, splitHand: true, natural: false };
 		var right = { cards: [original.cards[1]], wager: original.wager, done: false, splitHand: true, natural: false };
-		left.cards.push(deck.deal(1)[0]);
-		right.cards.push(deck.deal(1)[0]);
+		var leftCard = deck.deal(1)[0];
+		var rightCard = deck.deal(1)[0];
+		left.cards.push(leftCard);
+		right.cards.push(rightCard);
+		pendingAnimationIds = [leftCard.id, rightCard.id];
 		splitUsed = true;
 		hands = [left, right];
 		left.done = handValue(left.cards) >= 21;
@@ -366,7 +441,21 @@
 			left.done = true;
 			right.done = true;
 		}
-		advanceHands();
+		showPlayerRevealThenAdvance();
+	}
+
+	function showPlayerRevealThenAdvance() {
+		var token = interactionToken;
+		phase = 'revealing';
+		updateTable();
+		actionTimer = window.setTimeout(function() {
+			if (token !== interactionToken || phase !== 'revealing') {
+				return;
+			}
+			actionTimer = null;
+			phase = 'player';
+			advanceHands();
+		}, CARD_REVEAL_MS);
 	}
 
 	function advanceHands() {
@@ -380,13 +469,30 @@
 	function playDealerAndSettle() {
 		var anyLiveHand = hands.some(function(hand) { return handValue(hand.cards) <= 21; });
 		if (anyLiveHand) {
-			while (handValue(dealerCards) < 17) {
-				dealerCards.push(deck.deal(1)[0]);
-			}
-			settleRound(false, true);
+			phase = 'dealer';
+			updateTable();
+			continueDealerTurn(interactionToken);
 		} else {
 			settleRound(false, false);
 		}
+	}
+
+	function continueDealerTurn(token) {
+		if (token !== interactionToken || phase !== 'dealer') {
+			return;
+		}
+		if (handValue(dealerCards) < 17) {
+			var card = deck.deal(1)[0];
+			dealerCards.push(card);
+			pendingAnimationIds = [card.id];
+			updateTable();
+			actionTimer = window.setTimeout(function() {
+				actionTimer = null;
+				continueDealerTurn(token);
+			}, CARD_REVEAL_MS);
+			return;
+		}
+		settleRound(false, true);
 	}
 
 	function settleRound(dealerNatural, dealerPlayed) {
@@ -472,33 +578,6 @@
 			split(index);
 		}
 	}
-
-	function closeNavigation(returnFocus) {
-		navMenu.classList.remove('is-open');
-		navToggle.setAttribute('aria-expanded', 'false');
-		navToggle.setAttribute('aria-label', 'Open navigation');
-		if (returnFocus) {
-			navToggle.focus();
-		}
-	}
-
-	navToggle.addEventListener('click', function() {
-		var open = navMenu.classList.toggle('is-open');
-		navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-		navToggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-	});
-	document.addEventListener('keydown', function(event) {
-		if (event.key === 'Escape' && navMenu.classList.contains('is-open') && !document.querySelector('dialog[open]')) {
-			closeNavigation(true);
-		}
-	});
-
-	navMenu.querySelectorAll('.nav-action').forEach(function(button) {
-		button.addEventListener('click', function() { closeNavigation(false); });
-	});
-	navMenu.querySelectorAll('.nav-link').forEach(function(link) {
-		link.addEventListener('click', function() { closeNavigation(false); });
-	});
 
 	byId('welcome_new_game').addEventListener('click', newGame);
 	byId('new_game_btn').addEventListener('click', newGame);

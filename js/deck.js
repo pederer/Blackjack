@@ -1,5 +1,9 @@
 /** Card and shoe primitives used by the blackjack table. */
+var nextCardId = 1;
+
 function Card(suit, label, value, color) {
+	this.id = nextCardId;
+	nextCardId += 1;
 	this.suit = suit;
 	this.label = label;
 	this.value = value.slice(0);

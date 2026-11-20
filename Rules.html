@@ -7,6 +7,21 @@
 		<link rel="stylesheet" type="text/css" href="css/blackjack.css">
 	</head>
 	<body>
+		<nav class="site-nav" aria-label="Main navigation">
+			<div class="nav-inner">
+				<a class="nav-brand" href="Blackjack.html">Blackjack</a>
+				<button id="nav_toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="main_navigation" aria-label="Open navigation">
+					<span aria-hidden="true">☰</span>
+				</button>
+				<div id="main_navigation" class="nav-menu">
+					<ul class="nav-links">
+						<li><a class="nav-link" href="Blackjack.html">Play</a></li>
+						<li><a class="nav-link" href="Rules.html" aria-current="page">Rules</a></li>
+						<li><a class="nav-link" href="About.html">About</a></li>
+					</ul>
+				</div>
+			</div>
+		</nav>
 		<main class="rules-page">
 			<header>
 				<h1>Blackjack Rules</h1>
@@ -57,8 +72,7 @@
 				<h2>Not offered</h2>
 				<p>This game does not offer insurance or surrender.</p>
 			</section>
-
-			<p><a class="button button-primary" href="Blackjack.html">Back to Blackjack</a></p>
 		</main>
+		<script src="js/navigation.js"></script>
 	</body>
 </html>
