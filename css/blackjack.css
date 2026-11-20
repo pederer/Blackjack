@@ -1,41 +1,114 @@
+* {
+	box-sizing: border-box;
+}
+
 body {
 	min-height: 100vh;
+	margin: 0;
 	background: #214b32 url("../img/green_felt.jpg") center center / cover fixed;
+	color: #222;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	line-height: 1.5;
 }
 
 .hidden {
 	display: none !important;
 }
 
-.nav-button {
-	padding: 15px;
-	border: 0;
-	background: transparent;
-	color: #9d9d9d;
-	line-height: 20px;
+.site-nav {
+	background: #222;
+	color: #f5f5f5;
 }
 
-.nav-button:hover,
-.nav-button:focus {
-	color: #fff;
+.nav-inner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	max-width: 1180px;
+	min-height: 56px;
+	margin: 0 auto;
+	padding: 0 16px;
+}
+
+.nav-brand,
+.nav-link,
+.nav-action {
+	color: #e8e8e8;
+	text-decoration: none;
+}
+
+.nav-brand {
+	padding: 12px 0;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.nav-menu {
+	margin-left: auto;
+}
+
+.nav-links {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.nav-link,
+.nav-action {
+	display: block;
+	padding: 10px 12px;
+	border: 0;
+	border-radius: 5px;
 	background: transparent;
+	font: inherit;
+	cursor: pointer;
+}
+
+.nav-link:hover,
+.nav-action:hover {
+	background: #3c3c3c;
+	color: #fff;
+	text-decoration: underline;
+}
+
+.nav-toggle {
+	display: none;
+	min-width: 44px;
+	min-height: 44px;
+	margin-left: auto;
+	border: 1px solid #888;
+	border-radius: 5px;
+	background: transparent;
+	color: #fff;
+	font-size: 22px;
 }
 
 .welcome-screen {
-	margin-top: -20px;
+	margin-top: 0;
+	padding: 56px 20px;
+	background: rgba(255, 255, 255, 0.92);
 	text-align: center;
 }
 
-.welcome-screen .container {
+.welcome-content {
 	max-width: 900px;
+	margin: 0 auto;
+}
+
+.welcome-content h1 {
+	font-size: clamp(2rem, 5vw, 3.5rem);
 }
 
 .game-screen {
-	margin-bottom: 40px;
+	max-width: 1180px;
+	margin: 24px auto 40px;
 	padding: 20px;
 	border: 3px solid #788e3e;
 	border-radius: 18px;
-	background: rgba(20, 65, 39, 0.92);
+	background: rgba(20, 65, 39, 0.94);
 	color: #fff;
 	text-align: center;
 }
@@ -43,7 +116,7 @@ body {
 .game-status {
 	min-height: 1.5em;
 	font-size: 18px;
-	font-weight: bold;
+	font-weight: 700;
 }
 
 .table-area {
@@ -56,7 +129,7 @@ body {
 }
 
 .hand-cards {
-	min-height: 132px;
+	min-height: 156px;
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
@@ -75,7 +148,7 @@ body {
 
 .hand-total {
 	min-height: 1.5em;
-	font-weight: bold;
+	font-weight: 700;
 }
 
 .betting-row {
@@ -89,7 +162,7 @@ body {
 	padding: 10px;
 	border: 3px solid olivedrab;
 	border-radius: 22px;
-	background-color: tan;
+	background: tan;
 	color: #222;
 }
 
@@ -99,11 +172,7 @@ body {
 	border: 3px solid beige;
 	border-radius: 18px;
 	font-size: 18px;
-	font-weight: bold;
-}
-
-button.betting-info {
-	min-width: 175px;
+	font-weight: 700;
 }
 
 .table-rule {
@@ -139,7 +208,7 @@ button.betting-info {
 	margin-top: 10px;
 }
 
-.hand-actions .btn {
+.hand-actions .button {
 	min-width: 90px;
 }
 
@@ -147,14 +216,171 @@ button.betting-info {
 	font-style: italic;
 }
 
+.button {
+	display: inline-flex;
+	min-height: 42px;
+	align-items: center;
+	justify-content: center;
+	padding: 9px 15px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	font: inherit;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: center;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.button:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
+.button-primary {
+	background: #1769aa;
+	color: #fff;
+}
+
+.button-primary:hover:not(:disabled) {
+	background: #0f5288;
+}
+
+.button-secondary {
+	border-color: #777;
+	background: #fff;
+	color: #222;
+}
+
+.button-secondary:hover:not(:disabled) {
+	background: #e9e9e9;
+}
+
+.button-success {
+	background: #27733c;
+	color: #fff;
+}
+
+.button-success:hover:not(:disabled) {
+	background: #1f5f31;
+}
+
+.button-danger {
+	background: #a02c2c;
+	color: #fff;
+}
+
+.button-danger:hover:not(:disabled) {
+	background: #812222;
+}
+
+.button-large {
+	min-height: 48px;
+	padding: 12px 20px;
+	font-size: 18px;
+}
+
+.button-group {
+	display: flex;
+	gap: 8px;
+}
+
+.button.is-selected {
+	box-shadow: 0 0 0 3px #f0d36d;
+}
+
+.form-group {
+	margin: 18px 0;
+}
+
+label {
+	display: block;
+	margin: 10px 0 5px;
+	font-weight: 700;
+}
+
+input[type="number"] {
+	width: 100%;
+	min-height: 42px;
+	padding: 8px 10px;
+	border: 1px solid #777;
+	border-radius: 5px;
+	background: #fff;
+	color: #222;
+	font: inherit;
+}
+
 .validation-message {
 	min-height: 1.4em;
 	margin: 6px 0 0;
-	color: #a94442;
+	color: #a32626;
 }
 
-#optionsModal legend {
-	font-size: 16px;
+.dialog-window {
+	width: min(34rem, calc(100vw - 2rem));
+	max-width: none;
+	max-height: calc(100vh - 2rem);
+	margin: auto;
+	padding: 0;
+	overflow: auto;
+	border: 0;
+	border-radius: 12px;
+	background: #fff;
+	color: #222;
+	box-shadow: 0 16px 55px rgba(0, 0, 0, 0.35);
+}
+
+.dialog-window::backdrop {
+	background: rgba(0, 0, 0, 0.62);
+}
+
+.dialog-header,
+.dialog-footer {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 16px 20px;
+}
+
+.dialog-header {
+	position: sticky;
+	top: 0;
+	justify-content: space-between;
+	border-bottom: 1px solid #ddd;
+	background: #fff;
+}
+
+.dialog-header h2 {
+	margin: 0;
+	font-size: 1.35rem;
+}
+
+.dialog-body {
+	padding: 18px 20px;
+}
+
+.dialog-footer {
+	position: sticky;
+	bottom: 0;
+	justify-content: flex-end;
+	border-top: 1px solid #ddd;
+	background: #fff;
+}
+
+.dialog-close {
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 5px;
+	background: transparent;
+	color: #333;
+	font-size: 28px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.dialog-close:hover {
+	background: #eee;
 }
 
 .rules-page,
@@ -163,7 +389,7 @@ button.betting-info {
 	margin: 25px auto;
 	padding: 25px 35px;
 	border-radius: 14px;
-	background: rgba(255, 255, 255, 0.95);
+	background: rgba(255, 255, 255, 0.96);
 	color: #222;
 }
 
@@ -184,18 +410,51 @@ button.betting-info {
 button:focus,
 a:focus,
 input:focus {
-	outline: 3px solid #e7c843 !important;
-	outline-offset: 2px;
+	outline: 3px solid #e7c843;
+	outline-offset: 3px;
 }
 
 @media (max-width: 767px) {
-	.nav-button {
+	.nav-inner {
+		padding: 0 12px;
+	}
+
+	.nav-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.nav-menu {
+		display: none;
 		width: 100%;
-		padding: 10px 15px;
+		margin: 0;
+		padding: 4px 0 10px;
+	}
+
+	.nav-menu.is-open {
+		display: block;
+	}
+
+	.nav-links {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.nav-link,
+	.nav-action {
+		width: 100%;
+		padding: 11px 12px;
 		text-align: left;
 	}
 
+	.welcome-screen {
+		padding: 36px 16px;
+	}
+
 	.game-screen {
+		margin: 12px 8px 30px;
 		padding: 12px 8px;
 	}
 
@@ -223,5 +482,14 @@ input:focus {
 	.about-page {
 		margin: 12px;
 		padding: 20px;
+	}
+
+	.dialog-header,
+	.dialog-footer {
+		padding: 12px 14px;
+	}
+
+	.dialog-body {
+		padding: 14px;
 	}
 }

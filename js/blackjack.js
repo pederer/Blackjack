@@ -1,7 +1,5 @@
-/**
- * Browser controller for the single-player blackjack table.
- */
-(function($) {
+/** Browser controller for the single-player blackjack table. */
+(function() {
 	'use strict';
 
 	var STARTING_BANKROLL = 1000;
@@ -17,11 +15,17 @@
 	var splitUsed = false;
 	var roundStartBankroll = STARTING_BANKROLL;
 
-	var $welcome = $('#welcome_screen');
-	var $game = $('#game_screen');
-	var $wagerModal = $('#wagerModal');
-	var $resultsModal = $('#resultsModal');
-	var $optionsModal = $('#optionsModal');
+	function byId(id) {
+		return document.getElementById(id);
+	}
+
+	var welcomeScreen = byId('welcome_screen');
+	var gameScreen = byId('game_screen');
+	var navToggle = byId('nav_toggle');
+	var navMenu = byId('main_navigation');
+	var wagerDialog = byId('wagerModal');
+	var resultsDialog = byId('resultsModal');
+	var optionsDialog = byId('optionsModal');
 
 	function handValue(cards) {
 		var hardTotal = 0;
@@ -56,8 +60,7 @@
 	}
 
 	function cardName(card) {
-		var label = card.label === 'ace' ? 'ace' : card.label;
-		return label + ' of ' + card.suit;
+		return card.label + ' of ' + card.suit;
 	}
 
 	function renderCards(cards, hiddenHoleCard) {
@@ -81,9 +84,10 @@
 		var dealerTotal = '';
 		var dealerLabel = 'Dealer cards: ';
 		var i;
+		var dealerCardsNode;
 
-		$('#bankroll_display').text('Bankroll: $' + bankroll);
-		$('#dealer_cards').html(renderCards(dealerCards, dealerHidden));
+		byId('bankroll_display').textContent = 'Bankroll: $' + bankroll;
+		byId('dealer_cards').innerHTML = renderCards(dealerCards, dealerHidden);
 		if (dealerCards.length) {
 			if (dealerHidden) {
 				dealerLabel += cardName(dealerCards[0]) + ' and one card face down';
@@ -92,29 +96,35 @@
 				dealerLabel += dealerCards.map(cardName).join(', ');
 				dealerTotal = 'Total ' + handValue(dealerCards);
 			}
-			$('#dealer_cards .hand-cards').attr('aria-label', dealerLabel);
+			dealerCardsNode = byId('dealer_cards').querySelector('.hand-cards');
+			dealerCardsNode.setAttribute('aria-label', dealerLabel);
 		}
-		$('#dealer_total').text(dealerTotal);
+		byId('dealer_total').textContent = dealerTotal;
+		byId('game_status').textContent = statusText();
 
-		$('#game_status').text(statusText());
-		$('#player_hands').empty();
+		var playerHands = byId('player_hands');
+		playerHands.innerHTML = '';
 		for (i = 0; i < hands.length; i += 1) {
-			$('#player_hands').append(renderHand(i, hands[i]));
+			playerHands.insertAdjacentHTML('beforeend', renderHand(i, hands[i]));
 		}
 		if (phase === 'player') {
-			$('#player_hands .active-hand [data-action="hit"]').trigger('focus');
+			var firstAction = playerHands.querySelector('.active-hand [data-action="hit"]');
+			if (firstAction) {
+				firstAction.focus();
+			}
 		}
 
 		var canWager = phase === 'ready' || phase === 'settled';
-		$('#betting_mat').prop('disabled', !canWager || bankroll < 1);
+		var bettingMat = byId('betting_mat');
+		bettingMat.disabled = !canWager || bankroll < 1;
 		if (bankroll < 1 && canWager) {
-			$('#betting_mat').text('Below minimum wager — start a New Game');
+			bettingMat.textContent = 'Below minimum wager — start a New Game';
 		} else if (phase === 'player') {
-			$('#betting_mat').text('Round in progress');
+			bettingMat.textContent = 'Round in progress';
 		} else if (phase === 'settled') {
-			$('#betting_mat').text('Place Next Bet');
+			bettingMat.textContent = 'Place Next Bet';
 		} else {
-			$('#betting_mat').text('Place Bet');
+			bettingMat.textContent = 'Place Bet';
 		}
 	}
 
@@ -124,7 +134,7 @@
 		}
 		if (phase === 'player') {
 			var index = currentHandIndex();
-			return index === -1 ? 'Resolving the round…' : 'Hand ' + (index + 1) + ': choose Hit, Stand, Double Down, or Split when available.';
+			return index === -1 ? 'Resolving the round…' : 'Hand ' + (index + 1) + ': choose an available action.';
 		}
 		if (phase === 'settled') {
 			return bankroll >= 1 ? 'Round complete. Place another wager or start a New Game.' : 'Round complete. Your bankroll is below the minimum wager; start a New Game to reset it.';
@@ -176,13 +186,13 @@
 	}
 
 	function actionButton(action, label, disabled, hint) {
-		return '<button type="button" class="btn btn-default" data-action="' + action + '"' +
+		return '<button type="button" class="button button-secondary" data-action="' + action + '"' +
 			(disabled ? ' disabled aria-describedby="bankroll_display" title="' + hint + '"' : '') + '>' + label + '</button>';
 	}
 
 	function showGameScreen() {
-		$welcome.addClass('hidden');
-		$game.removeClass('hidden');
+		welcomeScreen.classList.add('hidden');
+		gameScreen.classList.remove('hidden');
 	}
 
 	function buildShoe() {
@@ -191,8 +201,18 @@
 		deck.shuffle();
 	}
 
+	function closeOpenDialogs(callback) {
+		var openDialogs = document.querySelectorAll('dialog[open]');
+		for (var i = 0; i < openDialogs.length; i += 1) {
+			openDialogs[i].close();
+		}
+		if (callback) {
+			callback();
+		}
+	}
+
 	function newGame() {
-		hideVisibleModals(function() {
+		closeOpenDialogs(function() {
 			bankroll = STARTING_BANKROLL;
 			previousWager = Math.min(previousWager, bankroll);
 			dealerCards = [];
@@ -202,42 +222,37 @@
 			buildShoe();
 			showGameScreen();
 			updateTable();
-			openWagerModal();
+			openWagerDialog();
 		});
 	}
 
-	function hideVisibleModals(callback) {
-		var $visible = $('.modal.in');
-		if (!$visible.length) {
-			callback();
-			return;
+	function openDialog(dialog, initialFocus) {
+		if (!dialog.open) {
+			dialog.showModal();
 		}
-		var remaining = $visible.length;
-		$visible.one('hidden.bs.modal', function() {
-			remaining -= 1;
-			if (!remaining) {
-				callback();
-			}
-		}).modal('hide');
+		if (initialFocus) {
+			initialFocus.focus();
+		}
 	}
 
-	function openWagerModal() {
+	function openWagerDialog() {
 		if (bankroll < 1) {
 			updateTable();
 			return;
 		}
-		$('#wager_bankroll').text('$' + bankroll);
-		$('#wager_input').attr('max', bankroll).val(Math.max(1, Math.min(previousWager, bankroll)));
-		validateWagerInput($('#wager_input'), $('#wager_error'), $('#start_round_btn'));
-		$wagerModal.modal('show');
+		byId('wager_bankroll').textContent = '$' + bankroll;
+		byId('wager_input').max = bankroll;
+		byId('wager_input').value = Math.max(1, Math.min(previousWager, bankroll));
+		validateWagerInput(byId('wager_input'), byId('wager_error'), byId('start_round_btn'));
+		openDialog(wagerDialog, byId('wager_input'));
 	}
 
-	function validateWagerInput($input, $error, $button) {
-		var raw = $input.val();
+	function validateWagerInput(input, error, button) {
+		var raw = input.value;
 		var amount = /^\d+$/.test(raw) ? Number(raw) : NaN;
 		var valid = isFinite(amount) && amount >= 1 && amount <= bankroll;
-		$button.prop('disabled', !valid);
-		$error.text(valid ? '' : 'Enter a whole-dollar wager from $1 to $' + bankroll + '.');
+		button.disabled = !valid;
+		error.textContent = valid ? '' : 'Enter a whole-dollar wager from $1 to $' + bankroll + '.';
 		return valid ? amount : null;
 	}
 
@@ -276,7 +291,7 @@
 		var dealerNatural = isBlackjack(dealerCards);
 		hands[0].natural = isBlackjack(hands[0].cards);
 		if (dealerNatural || hands[0].natural) {
-			revealDealer();
+			updateTable();
 			settleRound(dealerNatural, false);
 			return;
 		}
@@ -284,7 +299,10 @@
 	}
 
 	function revealDealer() {
-		$('#dealer_cards .hand-cards').attr('aria-label', 'Dealer cards: ' + dealerCards.map(cardName).join(', '));
+		var cardsNode = byId('dealer_cards').querySelector('.hand-cards');
+		if (cardsNode) {
+			cardsNode.setAttribute('aria-label', 'Dealer cards: ' + dealerCards.map(cardName).join(', '));
+		}
 	}
 
 	function hit(index) {
@@ -423,19 +441,20 @@
 		}
 
 		resultLines.push('<p><strong>Net for round:</strong> $' + (bankroll - roundStartBankroll) + '</p>');
-		$('#results_content').html(resultLines.join(''));
-		$('#results_bankroll').text('$' + bankroll);
-		$('#next_wager').attr('max', bankroll).val(Math.max(1, Math.min(previousWager, bankroll)));
+		byId('results_content').innerHTML = resultLines.join('');
+		byId('results_bankroll').textContent = '$' + bankroll;
+		byId('next_wager').max = bankroll;
+		byId('next_wager').value = Math.max(1, Math.min(previousWager, bankroll));
 		if (bankroll >= 1) {
-			$('#empty_bankroll_message').text('');
-			validateWagerInput($('#next_wager'), $('#next_wager_error'), $('#play_again_btn'));
+			byId('empty_bankroll_message').textContent = '';
+			validateWagerInput(byId('next_wager'), byId('next_wager_error'), byId('play_again_btn'));
 		} else {
-			$('#next_wager_error').text('');
-			$('#play_again_btn').prop('disabled', true);
-			$('#empty_bankroll_message').text('Your bankroll is below the $1 minimum wager. Start a New Game to reset it.');
+			byId('next_wager_error').textContent = '';
+			byId('play_again_btn').disabled = true;
+			byId('empty_bankroll_message').textContent = 'Your bankroll is below the $1 minimum wager. Start a New Game to reset it.';
 		}
 		updateTable();
-		$resultsModal.modal('show');
+		openDialog(resultsDialog, byId('next_wager'));
 	}
 
 	function handleAction(action) {
@@ -454,76 +473,120 @@
 		}
 	}
 
-	$('#welcome_new_game, #new_game_btn').on('click', newGame);
-	$('#betting_mat').on('click', openWagerModal);
-	$('#game_options_btn').on('click', function() {
-		$('#deck_count_input').val(selectedDeckCount);
-		$('#blue_deck_btn').toggleClass('btn-primary', selectedDeckColor === 'blue');
-		$('#red_deck_btn').toggleClass('btn-danger', selectedDeckColor === 'red');
-		$optionsModal.modal('show');
+	function closeNavigation(returnFocus) {
+		navMenu.classList.remove('is-open');
+		navToggle.setAttribute('aria-expanded', 'false');
+		navToggle.setAttribute('aria-label', 'Open navigation');
+		if (returnFocus) {
+			navToggle.focus();
+		}
+	}
+
+	navToggle.addEventListener('click', function() {
+		var open = navMenu.classList.toggle('is-open');
+		navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+		navToggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
 	});
-	$('#blue_deck_btn').on('click', function() {
-		$('#blue_deck_btn').addClass('btn-primary');
-		$('#red_deck_btn').removeClass('btn-danger');
-		$('#blue_deck_btn').attr('aria-pressed', 'true');
-		$('#red_deck_btn').attr('aria-pressed', 'false');
+	document.addEventListener('keydown', function(event) {
+		if (event.key === 'Escape' && navMenu.classList.contains('is-open') && !document.querySelector('dialog[open]')) {
+			closeNavigation(true);
+		}
 	});
-	$('#red_deck_btn').on('click', function() {
-		$('#red_deck_btn').addClass('btn-danger');
-		$('#blue_deck_btn').removeClass('btn-primary');
-		$('#red_deck_btn').attr('aria-pressed', 'true');
-		$('#blue_deck_btn').attr('aria-pressed', 'false');
+
+	navMenu.querySelectorAll('.nav-action').forEach(function(button) {
+		button.addEventListener('click', function() { closeNavigation(false); });
 	});
-	$('#save_options_btn').on('click', function() {
-		var rawCount = $('#deck_count_input').val();
+	navMenu.querySelectorAll('.nav-link').forEach(function(link) {
+		link.addEventListener('click', function() { closeNavigation(false); });
+	});
+
+	byId('welcome_new_game').addEventListener('click', newGame);
+	byId('new_game_btn').addEventListener('click', newGame);
+	byId('betting_mat').addEventListener('click', openWagerDialog);
+	byId('game_options_btn').addEventListener('click', function() {
+		byId('deck_count_input').value = selectedDeckCount;
+		byId('blue_deck_btn').classList.toggle('is-selected', selectedDeckColor === 'blue');
+		byId('red_deck_btn').classList.toggle('is-selected', selectedDeckColor === 'red');
+		byId('blue_deck_btn').setAttribute('aria-pressed', selectedDeckColor === 'blue' ? 'true' : 'false');
+		byId('red_deck_btn').setAttribute('aria-pressed', selectedDeckColor === 'red' ? 'true' : 'false');
+		openDialog(optionsDialog, byId('deck_count_input'));
+	});
+
+	byId('blue_deck_btn').addEventListener('click', function() {
+		byId('blue_deck_btn').classList.add('is-selected');
+		byId('red_deck_btn').classList.remove('is-selected');
+		byId('blue_deck_btn').setAttribute('aria-pressed', 'true');
+		byId('red_deck_btn').setAttribute('aria-pressed', 'false');
+	});
+	byId('red_deck_btn').addEventListener('click', function() {
+		byId('red_deck_btn').classList.add('is-selected');
+		byId('blue_deck_btn').classList.remove('is-selected');
+		byId('red_deck_btn').setAttribute('aria-pressed', 'true');
+		byId('blue_deck_btn').setAttribute('aria-pressed', 'false');
+	});
+	byId('save_options_btn').addEventListener('click', function() {
+		var rawCount = byId('deck_count_input').value;
 		var count = /^\d+$/.test(rawCount) ? Number(rawCount) : NaN;
 		if (!isFinite(count) || count < 1 || count > MAX_DECKS) {
-			$('#deck_count_error').text('Choose a whole number of decks from 1 to ' + MAX_DECKS + '.');
+			byId('deck_count_error').textContent = 'Choose a whole number of decks from 1 to ' + MAX_DECKS + '.';
 			return;
 		}
 		selectedDeckCount = count;
-		selectedDeckColor = $('#blue_deck_btn').hasClass('btn-primary') ? 'blue' : 'red';
-		$('#blue_deck_btn').attr('aria-pressed', selectedDeckColor === 'blue' ? 'true' : 'false');
-		$('#red_deck_btn').attr('aria-pressed', selectedDeckColor === 'red' ? 'true' : 'false');
-		$('#deck_count_error').text('');
-		$optionsModal.modal('hide');
+		selectedDeckColor = byId('blue_deck_btn').classList.contains('is-selected') ? 'blue' : 'red';
+		byId('deck_count_error').textContent = '';
+		optionsDialog.close();
 	});
 
-	$('#wager_input').on('input', function() {
-		validateWagerInput($('#wager_input'), $('#wager_error'), $('#start_round_btn'));
+	byId('wager_input').addEventListener('input', function() {
+		validateWagerInput(byId('wager_input'), byId('wager_error'), byId('start_round_btn'));
 	});
-	$('#next_wager').on('input', function() {
-		validateWagerInput($('#next_wager'), $('#next_wager_error'), $('#play_again_btn'));
+	byId('next_wager').addEventListener('input', function() {
+		validateWagerInput(byId('next_wager'), byId('next_wager_error'), byId('play_again_btn'));
 	});
-	$('#start_round_btn').on('click', function() {
-		var amount = validateWagerInput($('#wager_input'), $('#wager_error'), $('#start_round_btn'));
+	byId('start_round_btn').addEventListener('click', function() {
+		var amount = validateWagerInput(byId('wager_input'), byId('wager_error'), byId('start_round_btn'));
 		if (amount === null) {
 			return;
 		}
-		hideVisibleModals(function() { startRound(amount); });
+		closeOpenDialogs(function() { startRound(amount); });
 	});
-	$('#play_again_btn').on('click', function() {
-		var amount = validateWagerInput($('#next_wager'), $('#next_wager_error'), $('#play_again_btn'));
+	byId('play_again_btn').addEventListener('click', function() {
+		var amount = validateWagerInput(byId('next_wager'), byId('next_wager_error'), byId('play_again_btn'));
 		if (amount === null) {
 			return;
 		}
-		hideVisibleModals(function() { startRound(amount); });
+		closeOpenDialogs(function() { startRound(amount); });
 	});
-	$('#player_hands').on('click', '[data-action]', function() {
-		handleAction($(this).attr('data-action'));
-	});
-	$('#resultsModal').on('hidden.bs.modal', function() {
-		if (phase === 'settled' && bankroll > 0) {
-			$('#betting_mat').trigger('focus');
-		}
-	});
-	$('#wagerModal').on('hidden.bs.modal', function() {
-		if (phase === 'ready') {
-			$('#betting_mat').trigger('focus');
+	byId('player_hands').addEventListener('click', function(event) {
+		var button = event.target.closest('[data-action]');
+		if (button && byId('player_hands').contains(button) && !button.disabled) {
+			handleAction(button.getAttribute('data-action'));
 		}
 	});
 
-	$('#welcome_screen').removeClass('hidden');
-	$('#game_screen').addClass('hidden');
+	document.querySelectorAll('[data-close-dialog]').forEach(function(button) {
+		button.addEventListener('click', function() {
+			button.closest('dialog').close();
+		});
+	});
+
+	wagerDialog.addEventListener('close', function() {
+		if (phase === 'ready' && !document.querySelector('dialog[open]')) {
+			byId('betting_mat').focus();
+		}
+	});
+	resultsDialog.addEventListener('close', function() {
+		if (phase === 'settled' && !document.querySelector('dialog[open]')) {
+			byId(bankroll >= 1 ? 'betting_mat' : 'new_game_btn').focus();
+		}
+	});
+	optionsDialog.addEventListener('close', function() {
+		if (!document.querySelector('dialog[open]')) {
+			byId('game_options_btn').focus();
+		}
+	});
+
+	byId('welcome_screen').classList.remove('hidden');
+	byId('game_screen').classList.add('hidden');
 	updateTable();
-}(jQuery));
+}());

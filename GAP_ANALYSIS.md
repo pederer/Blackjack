@@ -16,8 +16,8 @@ The target is a single-player blackjack game with 3:2 blackjack, dealer stands o
 | Wagers and bankroll | Complete | Accepts positive whole-dollar wagers up to bankroll; commits the opening bet, split bet, and double stake when placed; pays wins, pushes, losses, and blackjack per hand. New Game resets the bankroll to $1,000. |
 | Empty bankroll and transitions | Complete | Disables betting below the $1 minimum and directs the player to New Game. Closing a results dialog leaves a clear Place Next Bet path. |
 | Rules and about | Complete | Rules and About are real pages linked from the main navigation; the insurance claim has been removed from the table. |
-| Responsive and keyboard access | Implemented; browser review pending | Responsive hand layout, labeled numeric fields, semantic controls, live status, card descriptions, modal labels, visible focus, and action focus movement are present. |
-| Maintenance | Complete | Removed the unused alternate game and player class, diagnostic deck display, temporary markup, and unused deck inspection methods. |
+| Responsive and keyboard access | Implemented; browser review pending | Responsive hand layout, labeled numeric fields, semantic controls, live status, card descriptions, native modal dialogs, visible focus, and action focus movement are present. |
+| Maintenance | Complete | Removed the unused alternate game and player class, diagnostic deck display, temporary markup, unused deck inspection methods, Bootstrap, and jQuery. |
 
 ## Implementation decisions
 
@@ -35,4 +35,4 @@ The target is a single-player blackjack game with 3:2 blackjack, dealer stands o
 ## Remaining work
 
 - Perform hands-on browser QA across current desktop and mobile browsers, especially card sprite sizing at narrow widths and Bootstrap modal focus restoration.
-- Consider replacing bundled jQuery 1.10.1 and Bootstrap 3 in a separate modernization pass; they remain for the existing collapse and modal behavior.
+- Perform browser QA of the native dialogs and mobile navigation before publishing.

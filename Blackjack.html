@@ -4,43 +4,37 @@
 		<title>Classic Blackjack</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<link rel="stylesheet" type="text/css" href="resources/bootstrap/css/bootstrap.min.css" media="screen">
 		<link rel="stylesheet" type="text/css" href="css/deck.css">
 		<link rel="stylesheet" type="text/css" href="css/blackjack.css">
 	</head>
 	<body>
-		<nav class="navbar navbar-inverse navbar-static-top" aria-label="Main navigation">
-			<div class="container">
-				<div class="navbar-header">
-					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#main_navigation" aria-expanded="false" aria-controls="main_navigation">
-						<span class="sr-only">Toggle navigation</span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-					</button>
-					<a class="navbar-brand" href="Blackjack.html">Blackjack</a>
-				</div>
-				<div id="main_navigation" class="navbar-collapse collapse">
-					<ul class="nav navbar-nav">
-						<li><button id="new_game_btn" type="button" class="nav-button">New Game</button></li>
-						<li><button id="game_options_btn" type="button" class="nav-button">Options</button></li>
-						<li><a href="Rules.html">Rules</a></li>
-						<li><a href="About.html">About</a></li>
+		<nav class="site-nav" aria-label="Main navigation">
+			<div class="nav-inner">
+				<a class="nav-brand" href="Blackjack.html">Blackjack</a>
+				<button id="nav_toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="main_navigation" aria-label="Open navigation">
+					<span aria-hidden="true">☰</span>
+				</button>
+				<div id="main_navigation" class="nav-menu">
+					<ul class="nav-links">
+						<li><button id="new_game_btn" type="button" class="nav-action">New Game</button></li>
+						<li><button id="game_options_btn" type="button" class="nav-action">Options</button></li>
+						<li><a class="nav-link" href="Rules.html">Rules</a></li>
+						<li><a class="nav-link" href="About.html">About</a></li>
 					</ul>
 				</div>
 			</div>
 		</nav>
 
 		<main>
-			<section id="welcome_screen" class="jumbotron welcome-screen">
-				<div class="container">
+			<section id="welcome_screen" class="welcome-screen">
+				<div class="welcome-content">
 					<h1>Welcome to Classic Blackjack</h1>
 					<p>Play a hand against the dealer using the rules listed on the Rules page.</p>
-					<p><button id="welcome_new_game" type="button" class="btn btn-primary btn-lg">New Game</button></p>
+					<p><button id="welcome_new_game" type="button" class="button button-primary button-large">New Game</button></p>
 				</div>
 			</section>
 
-			<section id="game_screen" class="container game-screen hidden" aria-label="Blackjack table">
+			<section id="game_screen" class="game-screen hidden" aria-label="Blackjack table">
 				<p id="game_status" class="game-status" role="status" aria-live="polite"></p>
 
 				<section class="table-area" aria-labelledby="dealer_heading">
@@ -51,7 +45,7 @@
 
 				<section class="betting-row" aria-label="Bankroll and table rules">
 					<p id="bankroll_display" class="betting-info"></p>
-					<button id="betting_mat" type="button" class="btn btn-success betting-info">Place Bet</button>
+					<button id="betting_mat" type="button" class="button button-success betting-info">Place Bet</button>
 					<p class="betting-info table-rule">Blackjack pays 3:2 · Dealer stands on soft 17</p>
 				</section>
 
@@ -59,82 +53,68 @@
 			</section>
 		</main>
 
-		<div class="modal fade" id="wagerModal" tabindex="-1" role="dialog" aria-labelledby="wager_title" aria-describedby="wager_instructions" data-backdrop="static" data-keyboard="false">
-			<div class="modal-dialog" role="document">
-				<div class="modal-content">
-					<div class="modal-header">
-						<button type="button" class="close" data-dismiss="modal" aria-label="Cancel wager"><span aria-hidden="true">&times;</span></button>
-						<h2 class="modal-title" id="wager_title">Place Your Bet</h2>
-					</div>
-					<div class="modal-body">
-						<p id="wager_instructions">Available bankroll: <strong id="wager_bankroll"></strong></p>
-						<label for="wager_input">Wager in whole dollars</label>
-						<input id="wager_input" type="number" class="form-control" min="1" step="1" aria-describedby="wager_instructions wager_error" required>
-						<p id="wager_error" class="validation-message" role="alert" aria-live="polite"></p>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-						<button id="start_round_btn" type="button" class="btn btn-primary" disabled>Deal</button>
-					</div>
-				</div>
+		<dialog class="dialog-window" id="wagerModal" aria-labelledby="wager_title" aria-describedby="wager_instructions">
+			<header class="dialog-header">
+				<h2 id="wager_title">Place Your Bet</h2>
+				<button type="button" class="dialog-close" data-close-dialog aria-label="Cancel wager">&times;</button>
+			</header>
+			<div class="dialog-body">
+				<p id="wager_instructions">Available bankroll: <strong id="wager_bankroll"></strong></p>
+				<label for="wager_input">Wager in whole dollars</label>
+				<input id="wager_input" type="number" min="1" step="1" aria-describedby="wager_instructions wager_error" required>
+				<p id="wager_error" class="validation-message" role="alert" aria-live="polite"></p>
 			</div>
-		</div>
+			<footer class="dialog-footer">
+				<button type="button" class="button button-secondary" data-close-dialog>Cancel</button>
+				<button id="start_round_btn" type="button" class="button button-primary" disabled>Deal</button>
+			</footer>
+		</dialog>
 
-		<div class="modal fade" id="resultsModal" tabindex="-1" role="dialog" aria-labelledby="results_title" aria-describedby="results_content">
-			<div class="modal-dialog" role="document">
-				<div class="modal-content">
-					<div class="modal-header">
-						<button type="button" class="close" data-dismiss="modal" aria-label="Close results"><span aria-hidden="true">&times;</span></button>
-						<h2 class="modal-title" id="results_title">Round Results</h2>
-					</div>
-					<div class="modal-body">
-						<div id="results_content" aria-live="polite"></div>
-						<p><strong>Bankroll:</strong> <span id="results_bankroll"></span></p>
-						<label for="next_wager">Next wager in whole dollars</label>
-						<input id="next_wager" type="number" class="form-control" min="1" step="1" aria-describedby="results_bankroll next_wager_error" required>
-						<p id="next_wager_error" class="validation-message" role="alert" aria-live="polite"></p>
-						<p id="empty_bankroll_message" class="validation-message" role="status"></p>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-						<button id="play_again_btn" type="button" class="btn btn-primary" disabled>Play Again</button>
-					</div>
-				</div>
+		<dialog class="dialog-window" id="resultsModal" aria-labelledby="results_title" aria-describedby="results_content">
+			<header class="dialog-header">
+				<h2 id="results_title">Round Results</h2>
+				<button type="button" class="dialog-close" data-close-dialog aria-label="Close results">&times;</button>
+			</header>
+			<div class="dialog-body">
+				<div id="results_content" aria-live="polite"></div>
+				<p><strong>Bankroll:</strong> <span id="results_bankroll"></span></p>
+				<label for="next_wager">Next wager in whole dollars</label>
+				<input id="next_wager" type="number" min="1" step="1" aria-describedby="results_bankroll next_wager_error" required>
+				<p id="next_wager_error" class="validation-message" role="alert" aria-live="polite"></p>
+				<p id="empty_bankroll_message" class="validation-message" role="status"></p>
 			</div>
-		</div>
+			<footer class="dialog-footer">
+				<button type="button" class="button button-secondary" data-close-dialog>Close</button>
+				<button id="play_again_btn" type="button" class="button button-primary" disabled>Play Again</button>
+			</footer>
+		</dialog>
 
-		<div class="modal fade" id="optionsModal" tabindex="-1" role="dialog" aria-labelledby="options_title">
-			<div class="modal-dialog" role="document">
-				<div class="modal-content">
-					<div class="modal-header">
-						<button type="button" class="close" data-dismiss="modal" aria-label="Close options"><span aria-hidden="true">&times;</span></button>
-						<h2 class="modal-title" id="options_title">Options</h2>
+		<dialog class="dialog-window" id="optionsModal" aria-labelledby="options_title">
+			<header class="dialog-header">
+				<h2 id="options_title">Options</h2>
+				<button type="button" class="dialog-close" data-close-dialog aria-label="Close options">&times;</button>
+			</header>
+			<div class="dialog-body">
+				<fieldset>
+					<legend>Card back color</legend>
+					<div class="button-group" role="group" aria-label="Card back color">
+						<button id="blue_deck_btn" type="button" class="button button-secondary" aria-pressed="false">Blue</button>
+						<button id="red_deck_btn" type="button" class="button button-danger" aria-pressed="true">Red</button>
 					</div>
-					<div class="modal-body">
-						<fieldset>
-							<legend>Card back color</legend>
-							<div class="btn-group" role="group" aria-label="Card back color">
-								<button id="blue_deck_btn" type="button" class="btn btn-default" aria-pressed="false">Blue</button>
-								<button id="red_deck_btn" type="button" class="btn btn-danger" aria-pressed="true">Red</button>
-							</div>
-						</fieldset>
-						<div class="form-group">
-							<label for="deck_count_input">Number of decks (1–8)</label>
-							<input id="deck_count_input" type="number" class="form-control" min="1" max="8" step="1" required>
-						</div>
-						<p id="deck_count_error" class="validation-message" role="alert" aria-live="polite"></p>
-						<p>Changes take effect when you start a New Game.</p>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-						<button id="save_options_btn" type="button" class="btn btn-primary">Save</button>
-					</div>
+				</fieldset>
+				<div class="form-group">
+					<label for="deck_count_input">Number of decks (1–8)</label>
+					<input id="deck_count_input" type="number" min="1" max="8" step="1" required>
 				</div>
+				<p id="deck_count_error" class="validation-message" role="alert" aria-live="polite"></p>
+				<p>Changes take effect when you start a New Game.</p>
 			</div>
-		</div>
+			<footer class="dialog-footer">
+				<button type="button" class="button button-secondary" data-close-dialog>Close</button>
+				<button id="save_options_btn" type="button" class="button button-primary">Save</button>
+			</footer>
+		</dialog>
 
-		<script src="resources/jquery/jquery-1.10.1.min.js"></script>
-		<script src="resources/bootstrap/js/bootstrap.min.js"></script>
 		<script src="js/deck.js"></script>
 		<script src="js/blackjack.js"></script>
 	</body>

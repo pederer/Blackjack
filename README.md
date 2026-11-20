@@ -6,7 +6,7 @@ Play the hosted game at [pederer.github.io/Blackjack](https://pederer.github.io/
 
 ## Run locally
 
-This is a static site; it has no build step or package install. From the repository root, run:
+This is a static site with no build step, package install, or runtime library dependencies. It uses native JavaScript, CSS, and HTML dialogs. From the repository root, run:
 
 ```sh
 python3 -m http.server 8000
@@ -14,7 +14,7 @@ python3 -m http.server 8000
 
 Then open [http://localhost:8000/Blackjack.html](http://localhost:8000/Blackjack.html). A local HTTP server keeps relative image, style, and script paths working consistently.
 
-The site targets current desktop and mobile versions of Firefox, Chrome, Safari, and Edge. It uses bundled jQuery 1.10.1 and Bootstrap 3 for navigation and modal behavior.
+The site targets current desktop and mobile versions of Firefox, Chrome, Safari, and Edge. Its modal dialogs use the browser's native `<dialog>` element.
 
 ## Project evaluation
 
