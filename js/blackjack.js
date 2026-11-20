@@ -1,359 +1,529 @@
 /**
- * Author: Patrick Ederer
- * Date: 10 June 13
+ * Browser controller for the single-player blackjack table.
  */
+(function($) {
+	'use strict';
 
-(function() {
-	
-	// Deck options
-	var deck_color = 'red',
-		number_of_decks = 1;
-	
-	var _bankroll = 1000;
-	var _wager = 100;
-	var _double_down = 1;
-	
-	var deck = new Deck(),
-		dealer = new Player('dealer'),
-		player = new Player('player'),
-		player_split = new Player('player-split');
-	
-	var setup = function() {
-		collect_cards(function() {
-			deck = new Deck();
-			deck.build_blackjack_deck(number_of_decks, deck_color);
-			wager();
-			// deal();
-		});
-	};
-	
-	var wager = function() {
-		$('#wagerModal h3').text('$' + String(_bankroll));
-		$('#wagerModal input').val(_wager);
-		
-		$('#wagerModal').modal('show');
-	};
-	
-	var deal = function() {
-		collect_cards(function() {
-			player.draw(deck.deal(1));
-			dealer.draw(deck.deal(1));
-			player.draw(deck.deal(1));
-			dealer.draw(deck.deal(1));
-			
-			show_cards();
-			
-			// Based on hand, enable/disable action options
-			var value = hand_value(player.cards())[0];
-			if (value === 9 || value === 10 || value === 11) {
-				$('.player-action .btn-double.hide').removeClass('hide');
-			} else {
-				$('.player-action .btn-double').addClass('hide');
+	var STARTING_BANKROLL = 1000;
+	var MAX_DECKS = 8;
+	var bankroll = STARTING_BANKROLL;
+	var previousWager = 100;
+	var selectedDeckColor = 'red';
+	var selectedDeckCount = 1;
+	var deck = null;
+	var dealerCards = [];
+	var hands = [];
+	var phase = 'welcome';
+	var splitUsed = false;
+	var roundStartBankroll = STARTING_BANKROLL;
+
+	var $welcome = $('#welcome_screen');
+	var $game = $('#game_screen');
+	var $wagerModal = $('#wagerModal');
+	var $resultsModal = $('#resultsModal');
+	var $optionsModal = $('#optionsModal');
+
+	function handValue(cards) {
+		var hardTotal = 0;
+		var hasAce = false;
+		var i;
+		for (i = 0; i < cards.length; i += 1) {
+			hardTotal += cards[i].value[0];
+			if (cards[i].label === 'ace') {
+				hasAce = true;
 			}
-			if (player.cards()[0].label === player.cards()[1].label) {
-				$('.player-action .btn-split.hide').removeClass('hide');
+		}
+		return hasAce && hardTotal + 10 <= 21 ? hardTotal + 10 : hardTotal;
+	}
+
+	function isBlackjack(cards) {
+		return cards.length === 2 && handValue(cards) === 21;
+	}
+
+	function hardHandValue(cards) {
+		var total = 0;
+		var i;
+		for (i = 0; i < cards.length; i += 1) {
+			total += cards[i].value[0];
+		}
+		return total;
+	}
+
+	function canDouble(hand) {
+		var total = hardHandValue(hand.cards);
+		return !hand.splitHand && hand.cards.length === 2 && !isBlackjack(hand.cards) &&
+			(total === 9 || total === 10 || total === 11);
+	}
+
+	function cardName(card) {
+		var label = card.label === 'ace' ? 'ace' : card.label;
+		return label + ' of ' + card.suit;
+	}
+
+	function renderCards(cards, hiddenHoleCard) {
+		var classes = [];
+		var spoken = [];
+		var i;
+		for (i = 0; i < cards.length; i += 1) {
+			if (hiddenHoleCard && i === 1) {
+				classes.push('<span class="' + cards[i].style_hidden_medium + '" aria-hidden="true"></span>');
+				spoken.push('one card face down');
 			} else {
-				$('.player-action .btn-split').addClass('hide');
+				classes.push('<span class="' + cards[i].style_medium + '" aria-hidden="true"></span>');
+				spoken.push(cardName(cards[i]));
 			}
-		});
-	};
-	
-	var collect_cards = function( callback ) {
-		_double_down = 1;
-		
-		// Receive cards from players and re-shuffle the deck
-		if (player_split.cards().length !== 0) {
-			$('.player-split').addClass('hide');
-			$('.player-split-action.hide').removeClass('hide');
-			deck.add_cards(player_split.discard_all());
 		}
-		$('.player-action.hide').removeClass('hide');
-		deck.add_cards(player.discard_all());
-		deck.add_cards(dealer.discard_all());
-		deck.shuffle();
-		
-		callback();
-	};
-	
-	var show_cards = function() {
-		player.show();
-		
-		var cards = dealer.cards();
-		if (cards.length !== 2) {
-			alert(name + ' has too many cards!');
+		return '<div class="hand-cards" role="img" aria-label="' + spoken.join(', ') + '">' + classes.join('') + '</div>';
+	}
+
+	function updateTable() {
+		var dealerHidden = phase === 'player';
+		var dealerTotal = '';
+		var dealerLabel = 'Dealer cards: ';
+		var i;
+
+		$('#bankroll_display').text('Bankroll: $' + bankroll);
+		$('#dealer_cards').html(renderCards(dealerCards, dealerHidden));
+		if (dealerCards.length) {
+			if (dealerHidden) {
+				dealerLabel += cardName(dealerCards[0]) + ' and one card face down';
+				dealerTotal = 'Showing ' + handValue([dealerCards[0]]);
+			} else {
+				dealerLabel += dealerCards.map(cardName).join(', ');
+				dealerTotal = 'Total ' + handValue(dealerCards);
+			}
+			$('#dealer_cards .hand-cards').attr('aria-label', dealerLabel);
 		}
-		$('.dealer-cards span').remove();
-		$('.dealer-cards').append('<span class="'+ cards[0].style_medium + '"></span>');
-		$('.dealer-cards').append('<span class="'+ cards[1].style_hidden_medium + '"></span>');
-	};
-	
-	Player.prototype.hit = function() {
-		var value = hand_value(this.cards());
-		if (value[0] < 21 && value[1] !== 21) {
-			this.draw(deck.deal(1));
-			this.show();
+		$('#dealer_total').text(dealerTotal);
+
+		$('#game_status').text(statusText());
+		$('#player_hands').empty();
+		for (i = 0; i < hands.length; i += 1) {
+			$('#player_hands').append(renderHand(i, hands[i]));
+		}
+		if (phase === 'player') {
+			$('#player_hands .active-hand [data-action="hit"]').trigger('focus');
+		}
+
+		var canWager = phase === 'ready' || phase === 'settled';
+		$('#betting_mat').prop('disabled', !canWager || bankroll < 1);
+		if (bankroll < 1 && canWager) {
+			$('#betting_mat').text('Below minimum wager — start a New Game');
+		} else if (phase === 'player') {
+			$('#betting_mat').text('Round in progress');
+		} else if (phase === 'settled') {
+			$('#betting_mat').text('Place Next Bet');
 		} else {
-			alert('You cannot "Hit" without going over 21.');
+			$('#betting_mat').text('Place Bet');
 		}
-	};
-	
-	Player.prototype.show = function() {
-		var name = this.name(),
-			cards = this.cards();
-			
-		$('.' + name + '-cards span').remove();
-		for (var index in cards) {
-			$('.' + name + '-cards').append('<span class="'+ cards[index].style_medium + '"></span>');
+	}
+
+	function statusText() {
+		if (phase === 'ready') {
+			return bankroll >= 1 ? 'Place a wager to begin.' : 'Your bankroll is below the minimum wager. Start a New Game to reset it.';
 		}
-		// Temporary trouble-shooting measure
-		show_deck();
-	};
-	
-	// Temporary trouble-shooting measure
-	var show_deck = function() {
-		var deck_cards = deck.cards();
-		var deck_copy = [];
-		
-		for (var index in deck_cards) {
-			deck_copy.push(new Card(deck_cards[index].suit, deck_cards[index].label, deck_cards[index].value, deck_cards[index].color));
+		if (phase === 'player') {
+			var index = currentHandIndex();
+			return index === -1 ? 'Resolving the round…' : 'Hand ' + (index + 1) + ': choose Hit, Stand, Double Down, or Split when available.';
 		}
-		
-		deck_copy.sort(function(a, b) {
-			if (a.value[0] < b.value[0]){
-				return -1;
-			} else if (a.value[0] > b.value[0]){
-				return 1;
-			} else {
-				if (a.label < b.label){
-					return -1;
-				} else if (a.label > b.label){
-					return 1;
-				} else {
-					return 0;
+		if (phase === 'settled') {
+			return bankroll >= 1 ? 'Round complete. Place another wager or start a New Game.' : 'Round complete. Your bankroll is below the minimum wager; start a New Game to reset it.';
+		}
+		return 'Start a New Game to play.';
+	}
+
+	function currentHandIndex() {
+		var i;
+		for (i = 0; i < hands.length; i += 1) {
+			if (!hands[i].done) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	function renderHand(index, hand) {
+		var current = phase === 'player' && index === currentHandIndex();
+		var title = hands.length > 1 ? 'Hand ' + (index + 1) : 'Your Hand';
+		var value = handValue(hand.cards);
+		var html = '<section class="player-hand' + (current ? ' active-hand' : '') + '" aria-labelledby="hand-title-' + index + '">';
+		html += '<h3 id="hand-title-' + index + '">' + title + '</h3>';
+		html += renderCards(hand.cards, false);
+		html += '<p class="hand-total">Total ' + value + ' · Wager $' + hand.wager + '</p>';
+		if (current) {
+			html += '<div class="hand-actions" role="group" aria-label="Actions for ' + title + '">';
+			html += actionButton('hit', 'Hit');
+			html += actionButton('stand', 'Stand');
+			if (canDouble(hand)) {
+				html += actionButton('double', 'Double Down', bankroll < hand.wager, 'Additional wager requires $' + hand.wager + '.');
+				if (bankroll < hand.wager) {
+					html += '<p class="hand-status">Double Down needs an additional $' + hand.wager + '.</p>';
 				}
 			}
+			if (!splitUsed && hand.cards.length === 2 && hand.cards[0].label === hand.cards[1].label) {
+				html += actionButton('split', 'Split', bankroll < hand.wager, 'Additional wager requires $' + hand.wager + '.');
+				if (bankroll < hand.wager) {
+					html += '<p class="hand-status">Splitting needs an additional $' + hand.wager + '.</p>';
+				}
+			}
+			html += '</div>';
+		} else if (hand.done) {
+			html += '<p class="hand-status">Hand complete</p>';
+		} else {
+			html += '<p class="hand-status">Waiting for the previous hand</p>';
+		}
+		return html + '</section>';
+	}
+
+	function actionButton(action, label, disabled, hint) {
+		return '<button type="button" class="btn btn-default" data-action="' + action + '"' +
+			(disabled ? ' disabled aria-describedby="bankroll_display" title="' + hint + '"' : '') + '>' + label + '</button>';
+	}
+
+	function showGameScreen() {
+		$welcome.addClass('hidden');
+		$game.removeClass('hidden');
+	}
+
+	function buildShoe() {
+		deck = new Deck();
+		deck.build_blackjack_deck(selectedDeckCount, selectedDeckColor);
+		deck.shuffle();
+	}
+
+	function newGame() {
+		hideVisibleModals(function() {
+			bankroll = STARTING_BANKROLL;
+			previousWager = Math.min(previousWager, bankroll);
+			dealerCards = [];
+			hands = [];
+			splitUsed = false;
+			phase = 'ready';
+			buildShoe();
+			showGameScreen();
+			updateTable();
+			openWagerModal();
 		});
-		
-		$('.deck-cards span').remove();
-		for (index in deck_copy) {
-			$('.deck-cards').append('<span class="'+ deck_copy[index].style_medium + '"></span>');
+	}
+
+	function hideVisibleModals(callback) {
+		var $visible = $('.modal.in');
+		if (!$visible.length) {
+			callback();
+			return;
 		}
-	};
-	
-	Player.prototype.stand = function() {
-		$('.' + this.name() + '-action').addClass('hide');
-		
-		if (player_split.cards().length !== 0) {
-			if (!$('.player-action').hasClass('hide') || !$('.player-split-action').hasClass('hide')) {
-				return false;
+		var remaining = $visible.length;
+		$visible.one('hidden.bs.modal', function() {
+			remaining -= 1;
+			if (!remaining) {
+				callback();
 			}
+		}).modal('hide');
+	}
+
+	function openWagerModal() {
+		if (bankroll < 1) {
+			updateTable();
+			return;
 		}
-		
-		var value = 0;
-		var done = false;
-		
-		dealer.show();
-		
-		while (!done) {
-			value = hand_value(dealer.cards());
-			if (value[0] > 16 || ( value[1] > 16 && value[1] <= 21) ) {
-				done = true;
+		$('#wager_bankroll').text('$' + bankroll);
+		$('#wager_input').attr('max', bankroll).val(Math.max(1, Math.min(previousWager, bankroll)));
+		validateWagerInput($('#wager_input'), $('#wager_error'), $('#start_round_btn'));
+		$wagerModal.modal('show');
+	}
+
+	function validateWagerInput($input, $error, $button) {
+		var raw = $input.val();
+		var amount = /^\d+$/.test(raw) ? Number(raw) : NaN;
+		var valid = isFinite(amount) && amount >= 1 && amount <= bankroll;
+		$button.prop('disabled', !valid);
+		$error.text(valid ? '' : 'Enter a whole-dollar wager from $1 to $' + bankroll + '.');
+		return valid ? amount : null;
+	}
+
+	function collectRoundCards() {
+		var i;
+		if (!deck) {
+			buildShoe();
+		}
+		for (i = 0; i < dealerCards.length; i += 1) {
+			deck.add_cards([dealerCards[i]]);
+		}
+		for (i = 0; i < hands.length; i += 1) {
+			deck.add_cards(hands[i].cards);
+		}
+		deck.shuffle();
+	}
+
+	function startRound(amount) {
+		if ((phase !== 'ready' && phase !== 'settled') || !isFinite(amount) || amount < 1 || Math.floor(amount) !== amount || amount > bankroll) {
+			return;
+		}
+		collectRoundCards();
+		roundStartBankroll = bankroll;
+		previousWager = amount;
+		bankroll -= amount;
+		splitUsed = false;
+		dealerCards = [];
+		hands = [{ cards: [], wager: amount, done: false, splitHand: false, natural: false }];
+		hands[0].cards.push(deck.deal(1)[0]);
+		dealerCards.push(deck.deal(1)[0]);
+		hands[0].cards.push(deck.deal(1)[0]);
+		dealerCards.push(deck.deal(1)[0]);
+		phase = 'player';
+		showGameScreen();
+
+		var dealerNatural = isBlackjack(dealerCards);
+		hands[0].natural = isBlackjack(hands[0].cards);
+		if (dealerNatural || hands[0].natural) {
+			revealDealer();
+			settleRound(dealerNatural, false);
+			return;
+		}
+		updateTable();
+	}
+
+	function revealDealer() {
+		$('#dealer_cards .hand-cards').attr('aria-label', 'Dealer cards: ' + dealerCards.map(cardName).join(', '));
+	}
+
+	function hit(index) {
+		if (phase !== 'player' || index !== currentHandIndex()) {
+			return;
+		}
+		var hand = hands[index];
+		if (handValue(hand.cards) >= 21) {
+			hand.done = true;
+			advanceHands();
+			return;
+		}
+		hand.cards.push(deck.deal(1)[0]);
+		if (handValue(hand.cards) >= 21) {
+			hand.done = true;
+		}
+		advanceHands();
+	}
+
+	function stand(index) {
+		if (phase !== 'player' || index !== currentHandIndex()) {
+			return;
+		}
+		hands[index].done = true;
+		advanceHands();
+	}
+
+	function doubleDown(index) {
+		if (phase !== 'player' || index !== currentHandIndex()) {
+			return;
+		}
+		var hand = hands[index];
+		if (!canDouble(hand) || bankroll < hand.wager) {
+			return;
+		}
+		bankroll -= hand.wager;
+		hand.wager *= 2;
+		hand.cards.push(deck.deal(1)[0]);
+		hand.done = true;
+		advanceHands();
+	}
+
+	function split(index) {
+		if (phase !== 'player' || index !== currentHandIndex() || splitUsed || bankroll < hands[index].wager) {
+			return;
+		}
+		var original = hands[index];
+		if (original.cards.length !== 2 || original.cards[0].label !== original.cards[1].label) {
+			return;
+		}
+		bankroll -= original.wager;
+		var left = { cards: [original.cards[0]], wager: original.wager, done: false, splitHand: true, natural: false };
+		var right = { cards: [original.cards[1]], wager: original.wager, done: false, splitHand: true, natural: false };
+		left.cards.push(deck.deal(1)[0]);
+		right.cards.push(deck.deal(1)[0]);
+		splitUsed = true;
+		hands = [left, right];
+		left.done = handValue(left.cards) >= 21;
+		right.done = handValue(right.cards) >= 21;
+		if (left.cards[0].label === 'ace') {
+			left.done = true;
+			right.done = true;
+		}
+		advanceHands();
+	}
+
+	function advanceHands() {
+		if (currentHandIndex() !== -1) {
+			updateTable();
+			return;
+		}
+		playDealerAndSettle();
+	}
+
+	function playDealerAndSettle() {
+		var anyLiveHand = hands.some(function(hand) { return handValue(hand.cards) <= 21; });
+		if (anyLiveHand) {
+			while (handValue(dealerCards) < 17) {
+				dealerCards.push(deck.deal(1)[0]);
+			}
+			settleRound(false, true);
+		} else {
+			settleRound(false, false);
+		}
+	}
+
+	function settleRound(dealerNatural, dealerPlayed) {
+		var dealerTotal = handValue(dealerCards);
+		var dealerBust = dealerTotal > 21;
+		var resultLines = [];
+		var i;
+		var hand;
+		var total;
+		var outcome;
+		var returned;
+
+		phase = 'settled';
+		revealDealer();
+		if (dealerNatural) {
+			resultLines.push('<p><strong>Dealer has blackjack.</strong></p>');
+		} else if (hands.some(function(item) { return item.natural; })) {
+			resultLines.push('<p>Dealer does not have blackjack.</p>');
+		} else if (dealerPlayed) {
+			resultLines.push('<p>' + (dealerBust ? 'Dealer busts.' : 'Dealer stands at ' + dealerTotal + '.') + '</p>');
+		} else {
+			resultLines.push('<p>Dealer reveals the hole card; all player hands have busted.</p>');
+		}
+
+		for (i = 0; i < hands.length; i += 1) {
+			hand = hands[i];
+			total = handValue(hand.cards);
+			returned = 0;
+			if (dealerNatural) {
+				if (hand.natural) {
+					outcome = 'Push';
+					returned = hand.wager;
+				} else {
+					outcome = 'Loss';
+				}
+			} else if (hand.natural) {
+				outcome = 'Blackjack — win pays 3:2';
+				returned = hand.wager * 2.5;
+			} else if (total > 21) {
+				outcome = 'Bust — loss';
+			} else if (dealerBust || total > dealerTotal) {
+				outcome = 'Win';
+				returned = hand.wager * 2;
+			} else if (total === dealerTotal) {
+				outcome = 'Push';
+				returned = hand.wager;
 			} else {
-				dealer.hit();
+				outcome = 'Loss';
 			}
+			bankroll += returned;
+			resultLines.push('<p><strong>' + (hands.length > 1 ? 'Hand ' + (i + 1) : 'Your hand') + ':</strong> ' + total + ' — ' + outcome + '.</p>');
 		}
-		results();
-	};
-	
-	Player.prototype.double_down = function() {
-		_double_down = 2;
-		this.hit();
-		this.stand();
-	};
-	
-	Player.prototype.split = function() {
-		$('.player-split.hide').removeClass('hide');
-		$('.player-split-action.hide').removeClass('hide');
-		player_split.draw(this.discard_set([1])[0]);
-		player_split.draw(deck.deal(1));
-		player_split.show();
-		
-		$('.player-action .btn-split').addClass('hide');
-		$('.player-action .btn-double').addClass('hide');
-		this.draw(deck.deal(1));
-		this.show();
-		
-		// After splitting aces, no other actions are allowed
-		if (this.cards()[0].label === 'ace') {
-			this.stand();
-			player_split.stand();
-		}
-	};
-	
-	
-	var hand_value = function( cards ) {
-		var value = 0;
-		var ace = false;
-		for (var c in cards) {
-			if (cards[c].label === 'ace') {
-				ace = true;
-			}
-			value += cards[c].value[0];
-		}
-		
-		if (ace) {
-			return [value, value + 10];
-		}
-		return [value, value];
-	};
-	
-	var results = function() {
-		var player_victory = true;
-		var player_split_victory = true;
-		var value = 0;
-		
-		$('#resultsModal .results span').remove();
-		var resultsModal = $('#resultsModal .results');
-		
-		var dealer_score = hand_value(dealer.cards());
-		dealer_score = dealer_score[0] > 16 ? dealer_score[0] : dealer_score[1];
-		if (dealer_score > 21) {
-			dealer_score = 0;
-			resultsModal.append('<span>Dealer goes bust!<br /></span>');
+
+		resultLines.push('<p><strong>Net for round:</strong> $' + (bankroll - roundStartBankroll) + '</p>');
+		$('#results_content').html(resultLines.join(''));
+		$('#results_bankroll').text('$' + bankroll);
+		$('#next_wager').attr('max', bankroll).val(Math.max(1, Math.min(previousWager, bankroll)));
+		if (bankroll >= 1) {
+			$('#empty_bankroll_message').text('');
+			validateWagerInput($('#next_wager'), $('#next_wager_error'), $('#play_again_btn'));
 		} else {
-			resultsModal.append('<span>Dealer scores ' + dealer_score + '<br /></span>');
+			$('#next_wager_error').text('');
+			$('#play_again_btn').prop('disabled', true);
+			$('#empty_bankroll_message').text('Your bankroll is below the $1 minimum wager. Start a New Game to reset it.');
 		}
-		
-		var player_score = hand_value(player.cards());
-		player_score = player_score[1] <= 21 ? player_score[1] : player_score[0];
-		if (player_score > 21) {
-			player_score = 0;
-			resultsModal.append('<span>Player goes bust!<br /></span>');
-		} else {
-			resultsModal.append('<span>Player scores ' + player_score + '<br /></span>');
+		updateTable();
+		$resultsModal.modal('show');
+	}
+
+	function handleAction(action) {
+		var index = currentHandIndex();
+		if (index === -1) {
+			return;
 		}
-		
-		if (player_score === 21 && player.cards().length === 2 && player_split.cards().length === 0) {
-			value = ((_wager * 3) / 2);
-		} else if (player_score > dealer_score) {
-			value += (_wager * _double_down);
-		} else if (player_score === dealer_score && player_score !== 0){
-			// Push
-		} else {
-			value -= (_wager * _double_down);
+		if (action === 'hit') {
+			hit(index);
+		} else if (action === 'stand') {
+			stand(index);
+		} else if (action === 'double') {
+			doubleDown(index);
+		} else if (action === 'split') {
+			split(index);
 		}
-		
-		if (player_split.cards().length) {
-			player_score = hand_value(player_split.cards());
-			player_score = player_score[1] <= 21 ? player_score[1] : player_score[0];
-			if (player_score > 21) {
-				player_score = 0;
-				resultsModal.append('<span>Player\'s split goes bust!<br /></span>');
-			} else {
-				resultsModal.append('<span>Player\'s split scores ' + player_score + '<br /></span>');
-			}
-			
-			if (player_score > dealer_score) {
-				value += (_wager * _double_down);
-			} else if (player_score === dealer_score && player_score !== 0){
-				// Push
-			} else {
-				value -= (_wager * _double_down);
-			}
-		}
-		
-		resultsModal.append('<span><br />Net gain: ' + value + '<br /></span>');
-		
-		_bankroll += value;
-		
-		$('#resultsModal h3').text('$' + String(_bankroll));
-		$('#resultsModal input').val(_wager);
-		$('#resultsModal').modal('show');
-	};
-	
-	
-	
-	//////////////////////////////////////////////////////////////////////////
-	// 							Game Control Buttons						//
-	//////////////////////////////////////////////////////////////////////////
-	$('.jumbotron .btn').click(setup);
-	
-	$('#new_game_btn').click(function() {
-		// This hack allows me to navigate without setting "active" classes in the navbar
-		$('.jumbotron .btn').click();
+	}
+
+	$('#welcome_new_game, #new_game_btn').on('click', newGame);
+	$('#betting_mat').on('click', openWagerModal);
+	$('#game_options_btn').on('click', function() {
+		$('#deck_count_input').val(selectedDeckCount);
+		$('#blue_deck_btn').toggleClass('btn-primary', selectedDeckColor === 'blue');
+		$('#red_deck_btn').toggleClass('btn-danger', selectedDeckColor === 'red');
+		$optionsModal.modal('show');
 	});
-	
-	$('#betting_mat').click(function() {
-		// alert('here')
-	});
-	
-	
-	
-	//////////////////////////////////////////////////////////////////////////
-	// 							Modal Buttons								//
-	//////////////////////////////////////////////////////////////////////////
-	$('#game_options_btn').click(function() {
-		if (deck_color === 'red') {
-			$('#blue_deck_btn').removeClass('btn-primary');
-			$('#red_deck_btn').addClass('btn-danger');
-		} else {
-			$('#blue_deck_btn').addClass('btn-primary');
-			$('#red_deck_btn').removeClass('btn-danger');
-		}
-		
-		$('#deck_count_input').val(number_of_decks);
-		
-		$('#optionsModal').modal('show');
-	});
-	
-	$('#blue_deck_btn').click(function() {
+	$('#blue_deck_btn').on('click', function() {
 		$('#blue_deck_btn').addClass('btn-primary');
 		$('#red_deck_btn').removeClass('btn-danger');
+		$('#blue_deck_btn').attr('aria-pressed', 'true');
+		$('#red_deck_btn').attr('aria-pressed', 'false');
 	});
-	
-	$('#red_deck_btn').click(function() {
-		$('#blue_deck_btn').removeClass('btn-primary');
+	$('#red_deck_btn').on('click', function() {
 		$('#red_deck_btn').addClass('btn-danger');
+		$('#blue_deck_btn').removeClass('btn-primary');
+		$('#red_deck_btn').attr('aria-pressed', 'true');
+		$('#blue_deck_btn').attr('aria-pressed', 'false');
 	});
-	
-	$('#optionsModal .modal-footer .btn-primary').click(function() {
-		number_of_decks = $('#deck_count_input').val();
-		var intRegex = /^\d{1,2}$/;
-		if (!intRegex.test(number_of_decks)) {
-			number_of_decks = 1;
+	$('#save_options_btn').on('click', function() {
+		var rawCount = $('#deck_count_input').val();
+		var count = /^\d+$/.test(rawCount) ? Number(rawCount) : NaN;
+		if (!isFinite(count) || count < 1 || count > MAX_DECKS) {
+			$('#deck_count_error').text('Choose a whole number of decks from 1 to ' + MAX_DECKS + '.');
+			return;
 		}
-		if ($('#blue_deck_btn').hasClass('btn-primary')) {
-			deck_color = 'blue';
-		} else {
-			deck_color = 'red';
+		selectedDeckCount = count;
+		selectedDeckColor = $('#blue_deck_btn').hasClass('btn-primary') ? 'blue' : 'red';
+		$('#blue_deck_btn').attr('aria-pressed', selectedDeckColor === 'blue' ? 'true' : 'false');
+		$('#red_deck_btn').attr('aria-pressed', selectedDeckColor === 'red' ? 'true' : 'false');
+		$('#deck_count_error').text('');
+		$optionsModal.modal('hide');
+	});
+
+	$('#wager_input').on('input', function() {
+		validateWagerInput($('#wager_input'), $('#wager_error'), $('#start_round_btn'));
+	});
+	$('#next_wager').on('input', function() {
+		validateWagerInput($('#next_wager'), $('#next_wager_error'), $('#play_again_btn'));
+	});
+	$('#start_round_btn').on('click', function() {
+		var amount = validateWagerInput($('#wager_input'), $('#wager_error'), $('#start_round_btn'));
+		if (amount === null) {
+			return;
+		}
+		hideVisibleModals(function() { startRound(amount); });
+	});
+	$('#play_again_btn').on('click', function() {
+		var amount = validateWagerInput($('#next_wager'), $('#next_wager_error'), $('#play_again_btn'));
+		if (amount === null) {
+			return;
+		}
+		hideVisibleModals(function() { startRound(amount); });
+	});
+	$('#player_hands').on('click', '[data-action]', function() {
+		handleAction($(this).attr('data-action'));
+	});
+	$('#resultsModal').on('hidden.bs.modal', function() {
+		if (phase === 'settled' && bankroll > 0) {
+			$('#betting_mat').trigger('focus');
 		}
 	});
-	
-	$('#resultsModal .btn-primary').on('click', function() {
-		_wager = parseInt($('#resultsModal input').val());
-		deal();
+	$('#wagerModal').on('hidden.bs.modal', function() {
+		if (phase === 'ready') {
+			$('#betting_mat').trigger('focus');
+		}
 	});
-	
-	$('#wagerModal .btn-primary').on('click', function() {
-		_wager = parseInt($('#wagerModal input').val());
-		deal();
-	});
-	
-	
-	
-	//////////////////////////////////////////////////////////////////////////
-	// 							Action-Bar Buttons							//
-	//////////////////////////////////////////////////////////////////////////
-	$('.player-split-action .btn-hit').click(function() { player_split.hit(); });
-	
-	$('.player-split-action .btn-stand').click(function() { player_split.stand(); });
-	
-	$('.player-action .btn-hit').click(function() { player.hit(); });
-	
-	$('.player-action .btn-stand').click(function() { player.stand(); });
-	
-	$('.player-action .btn-double').click(function() { player.double_down(); });
-	
-	$('.player-action .btn-split').click(function() { player.split(); });
-	
-})();
+
+	$('#welcome_screen').removeClass('hidden');
+	$('#game_screen').addClass('hidden');
+	updateTable();
+}(jQuery));
