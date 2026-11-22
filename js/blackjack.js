@@ -154,7 +154,7 @@
 		}
 		if (phase === 'player') {
 			var index = currentHandIndex();
-			return index === -1 ? 'Resolving the round…' : 'Hand ' + (index + 1) + ': choose an available action.';
+			return index === -1 ? 'Resolving the round…' : (hands.length > 1 ? 'Playing Hand ' + (index + 1) + ' of ' + hands.length + ': choose an available action.' : 'Your hand: choose an available action.');
 		}
 		if (phase === 'settled') {
 			return bankroll >= 1 ? 'Round complete. Place another wager or start a New Game.' : 'Round complete. Your bankroll is below the minimum wager; start a New Game to reset it.';
@@ -181,6 +181,9 @@
 		html += renderCards(hand.cards, false, animationIds);
 		html += '<p class="hand-total">Total ' + value + ' · Wager $' + hand.wager + '</p>';
 		if (current) {
+			if (hands.length > 1) {
+				html += '<p class="hand-status action-help">Playing Hand ' + (index + 1) + ' of ' + hands.length + '.</p>';
+			}
 			html += '<div class="hand-actions" role="group" aria-label="Actions for ' + title + '">';
 			html += actionButton('hit', 'Hit');
 			html += actionButton('stand', 'Stand');
@@ -189,6 +192,10 @@
 				if (bankroll < hand.wager) {
 					html += '<p class="hand-status">Double Down needs an additional $' + hand.wager + '.</p>';
 				}
+			} else if (hand.splitHand) {
+				html += '<p class="hand-status action-help">Double Down is unavailable after splitting.</p>';
+			} else {
+				html += '<p class="hand-status action-help">Double Down is available only on an opening hard total of 9, 10, or 11.</p>';
 			}
 			if (!splitUsed && hand.cards.length === 2 && hand.cards[0].label === hand.cards[1].label) {
 				html += actionButton('split', 'Split', bankroll < hand.wager, 'Additional wager requires $' + hand.wager + '.');
@@ -198,9 +205,9 @@
 			}
 			html += '</div>';
 		} else if (hand.done) {
-			html += '<p class="hand-status">Hand complete</p>';
+			html += '<p class="hand-status">' + (hand.splitHand && hand.cards[0].label === 'ace' ? 'Split aces receive one card each; this hand stands.' : 'Hand complete') + '</p>';
 		} else {
-			html += '<p class="hand-status">Waiting for the previous hand</p>';
+			html += '<p class="hand-status">Waiting for Hand ' + index + ' to finish.</p>';
 		}
 		return html + '</section>';
 	}

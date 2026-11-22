@@ -236,6 +236,11 @@ body {
 	font-style: italic;
 }
 
+.action-help {
+	margin: 6px 0;
+	font-size: 0.95rem;
+}
+
 .button {
 	display: inline-flex;
 	min-height: 42px;
